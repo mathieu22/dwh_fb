@@ -22,7 +22,7 @@ SWAGGER_CONFIG = {
             "model_filter": lambda tag: True,
         }
     ],
-    "static_url_path": "/api-fb/flasgger_static",
+    "static_url_path": "/flasgger_static",
     "swagger_ui": True,
     "specs_route": "/apidocs/",
     "parse": True
