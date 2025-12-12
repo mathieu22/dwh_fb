@@ -26,7 +26,8 @@ class Config:
     JWT_HEADER_TYPE = 'Bearer'
 
     # CORS
-    CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:3000').split(',')
+    _cors_origins = os.getenv('CORS_ORIGINS', 'http://localhost:3000')
+    CORS_ORIGINS = ['*'] if _cors_origins == '*' else _cors_origins.split(',')
 
     # Pagination
     DEFAULT_PAGE_SIZE = int(os.getenv('DEFAULT_PAGE_SIZE', 20))

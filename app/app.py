@@ -38,6 +38,7 @@ SWAGGER_TEMPLATE = {
             "email": "support@example.com"
         }
     },
+    "basePath": "/api-fb",
     "securityDefinitions": {
         "Bearer": {
             "type": "apiKey",
@@ -101,10 +102,11 @@ def register_extensions(app):
 
     # CORS avec les origines configurées
     cors.init_app(app, resources={
-        r"/api/*": {
-            "origins": app.config.get('CORS_ORIGINS', ['*']),
+        r"/*": {
+            "origins": "*",
             "methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"]
+            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+            "supports_credentials": False
         }
     })
 
