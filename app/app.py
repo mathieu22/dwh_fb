@@ -32,7 +32,7 @@ SWAGGER_TEMPLATE = {
     "info": {
         "title": "Dashboard FB API",
         "description": "API REST pour la gestion des commandes, produits, stocks et utilisateurs avec historisation complète.",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "contact": {
             "name": "Support API",
             "email": "support@example.com"
@@ -121,14 +121,14 @@ def register_blueprints(app):
     # Route de santé
     @app.route('/health')
     def health():
-        return jsonify({'status': 'healthy', 'version': '1.0.0'}), 200
+        return jsonify({'status': 'healthy', 'version': '1.1.0'}), 200
 
     # Route racine
     @app.route('/')
     def index():
         return jsonify({
             'name': 'Dashboard FB API',
-            'version': '1.0.0',
+            'version': '1.1.0',
             'endpoints': {
                 'health': '/health',
                 'api': '/api/v1',
