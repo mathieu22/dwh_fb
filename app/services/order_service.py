@@ -2,7 +2,7 @@
 Service Order - Gestion des commandes et workflow
 """
 from app.extensions import db
-from app.models.order import Order, OrderItem, OrderStatus
+from app.models.order import Order, OrderItem, OrderStatus, TypePaiement
 from app.models.product import Product
 from app.services.stock_service import StockService
 
@@ -175,14 +175,49 @@ class OrderService:
         return order
 
     @staticmethod
-    def cancel_order(order, reason=None):
+    def cancel_order(order, motif_annulation):
         """
-        Annule une commande.
+        Annule une commande avec un motif obligatoire.
         """
-        if reason:
-            order.notes = f"{order.notes or ''}\nAnnulation: {reason}".strip()
+        if not motif_annulation:
+            raise ValueError("Le motif d'annulation est obligatoire")
+
+        order.motif_annulation = motif_annulation
 
         return OrderService.update_status(order, OrderStatus.ANNULEE)
+
+    @staticmethod
+    def pay_order(order, payment_data):
+        """
+        Enregistre le paiement d'une commande et passe au statut PAYEE.
+        """
+        if not order.can_transition_to(OrderStatus.PAYEE):
+            raise ValueError(f"Transition invalide depuis le statut {order.status}. La commande doit être confirmée.")
+
+        type_paiement = payment_data.get('type_paiement')
+        montant_paye = payment_data.get('montant_paye')
+
+        # Validation du type de paiement
+        if type_paiement not in [t.value for t in TypePaiement]:
+            raise ValueError(f"Type de paiement invalide: {type_paiement}")
+
+        # Validation des champs mobile money
+        if type_paiement == TypePaiement.MOBILE_MONEY.value:
+            if not payment_data.get('mobile_money_numero'):
+                raise ValueError("Le numéro mobile money est obligatoire pour ce type de paiement")
+            if not payment_data.get('mobile_money_ref'):
+                raise ValueError("La référence mobile money est obligatoire pour ce type de paiement")
+
+        # Enregistrer les informations de paiement
+        order.type_paiement = type_paiement
+        order.montant_paye = montant_paye
+        order.mobile_money_numero = payment_data.get('mobile_money_numero')
+        order.mobile_money_ref = payment_data.get('mobile_money_ref')
+
+        # Mettre à jour le statut
+        order.update_status(OrderStatus.PAYEE)
+
+        return order
 
     @staticmethod
     def assign_livreur(order, livreur_id):

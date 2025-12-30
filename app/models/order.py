@@ -13,16 +13,24 @@ class OrderStatus(str, Enum):
     """Statuts de commande selon le workflow"""
     BROUILLON = 'brouillon'
     CONFIRMEE = 'confirmee'
+    PAYEE = 'payee'
     EN_PREPARATION = 'en_preparation'
     EN_LIVRAISON = 'en_livraison'
     LIVREE = 'livree'
     ANNULEE = 'annulee'
 
 
+class TypePaiement(str, Enum):
+    """Types de paiement disponibles"""
+    CASH = 'cash'
+    MOBILE_MONEY = 'mobile_money'
+
+
 # Transitions valides du workflow
 VALID_TRANSITIONS = {
     OrderStatus.BROUILLON: [OrderStatus.CONFIRMEE, OrderStatus.ANNULEE],
-    OrderStatus.CONFIRMEE: [OrderStatus.EN_PREPARATION, OrderStatus.ANNULEE],
+    OrderStatus.CONFIRMEE: [OrderStatus.PAYEE, OrderStatus.ANNULEE],
+    OrderStatus.PAYEE: [OrderStatus.EN_PREPARATION, OrderStatus.ANNULEE],
     OrderStatus.EN_PREPARATION: [OrderStatus.EN_LIVRAISON, OrderStatus.ANNULEE],
     OrderStatus.EN_LIVRAISON: [OrderStatus.LIVREE, OrderStatus.ANNULEE],
     OrderStatus.LIVREE: [],
@@ -59,6 +67,16 @@ class Order(db.Model, AuditMixin, SoftDeleteMixin):
 
     # Notes
     notes = db.Column(db.Text, nullable=True)
+
+    # Motif d'annulation (obligatoire si status = annulee)
+    motif_annulation = db.Column(db.Text, nullable=True)
+
+    # Informations de paiement (quand status = payee)
+    type_paiement = db.Column(db.String(20), nullable=True)  # cash ou mobile_money
+    mobile_money_numero = db.Column(db.String(30), nullable=True)  # Numéro du client
+    mobile_money_ref = db.Column(db.String(100), nullable=True)  # Référence transaction
+    montant_paye = db.Column(db.Numeric(12, 2), nullable=True)
+    date_paiement = db.Column(db.DateTime, nullable=True)
 
     # Foreign Keys
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)  # Créateur de la commande
@@ -101,6 +119,8 @@ class Order(db.Model, AuditMixin, SoftDeleteMixin):
         now = datetime.utcnow()
         if new_status_value == OrderStatus.CONFIRMEE.value:
             self.date_confirmation = now
+        elif new_status_value == OrderStatus.PAYEE.value:
+            self.date_paiement = now
         elif new_status_value == OrderStatus.EN_PREPARATION.value:
             self.date_preparation = now
         elif new_status_value == OrderStatus.EN_LIVRAISON.value:
@@ -135,10 +155,17 @@ class Order(db.Model, AuditMixin, SoftDeleteMixin):
             'montant_remise': float(self.montant_remise) if self.montant_remise else 0,
             'montant_livraison': float(self.montant_livraison) if self.montant_livraison else 0,
             'date_confirmation': self.date_confirmation.isoformat() if self.date_confirmation else None,
+            'date_paiement': self.date_paiement.isoformat() if self.date_paiement else None,
             'date_preparation': self.date_preparation.isoformat() if self.date_preparation else None,
             'date_expedition': self.date_expedition.isoformat() if self.date_expedition else None,
             'date_livraison': self.date_livraison.isoformat() if self.date_livraison else None,
             'notes': self.notes,
+            'motif_annulation': self.motif_annulation,
+            # Informations de paiement
+            'type_paiement': self.type_paiement,
+            'mobile_money_numero': self.mobile_money_numero,
+            'mobile_money_ref': self.mobile_money_ref,
+            'montant_paye': float(self.montant_paye) if self.montant_paye else None,
             'user_id': self.user_id,
             'livreur_id': self.livreur_id,
             'created_at': self.created_at.isoformat() if self.created_at else None,
@@ -146,6 +173,17 @@ class Order(db.Model, AuditMixin, SoftDeleteMixin):
             'created_by': self.created_by,
             'updated_by': self.updated_by
         }
+
+        # Ajouter les coordonnées du livreur si assigné
+        if self.livreur:
+            data['livreur'] = {
+                'id': self.livreur.id,
+                'nom': self.livreur.nom,
+                'prenom': self.livreur.prenom,
+                'telephone': self.livreur.telephone
+            }
+        else:
+            data['livreur'] = None
 
         if include_items:
             data['items'] = [item.to_dict() for item in self.items]
@@ -177,16 +215,33 @@ class OrderItem(db.Model, AuditMixin):
 
     def to_dict(self):
         """Conversion en dictionnaire"""
-        return {
+        data = {
             'id': self.id,
             'order_id': self.order_id,
             'product_id': self.product_id,
-            'product_nom': self.product.nom if self.product else None,
             'quantity': self.quantity,
             'prix_unitaire': float(self.prix_unitaire) if self.prix_unitaire else 0,
             'prix_total': float(self.prix_total) if self.prix_total else 0,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
+
+        # Ajouter tous les attributs du produit
+        if self.product:
+            data['product'] = {
+                'id': self.product.id,
+                'nom': self.product.nom,
+                'description': self.product.description,
+                'sku': self.product.sku,
+                'photo_url': self.product.photo_url,
+                'prix_actuel': float(self.product.prix) if self.product.prix else 0,
+                'category_id': self.product.category_id,
+                'category_nom': self.product.category.nom if self.product.category else None,
+                'is_active': self.product.is_active
+            }
+        else:
+            data['product'] = None
+
+        return data
 
 
 # Enregistrer les listeners d'audit

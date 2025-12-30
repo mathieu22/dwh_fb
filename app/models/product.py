@@ -79,5 +79,38 @@ class Product(db.Model, AuditMixin, SoftDeleteMixin):
         return data
 
 
+class PriceHistory(db.Model, AuditMixin):
+    """
+    Modèle PriceHistory - Historique des changements de prix des produits.
+    """
+    __tablename__ = 'price_history'
+
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), nullable=False, index=True)
+    ancien_prix = db.Column(db.Numeric(10, 2), nullable=False)
+    nouveau_prix = db.Column(db.Numeric(10, 2), nullable=False)
+    date_changement = db.Column(db.DateTime, nullable=False, default=db.func.current_timestamp())
+    motif = db.Column(db.String(255), nullable=True)  # Optionnel: raison du changement
+
+    # Relation
+    product = db.relationship('Product', backref=db.backref('price_history', lazy='dynamic', order_by='PriceHistory.date_changement.desc()'))
+
+    def __repr__(self):
+        return f'<PriceHistory Product:{self.product_id} {self.ancien_prix} -> {self.nouveau_prix}>'
+
+    def to_dict(self):
+        """Conversion en dictionnaire"""
+        return {
+            'id': self.id,
+            'product_id': self.product_id,
+            'ancien_prix': float(self.ancien_prix) if self.ancien_prix else 0,
+            'nouveau_prix': float(self.nouveau_prix) if self.nouveau_prix else 0,
+            'date_changement': self.date_changement.isoformat() if self.date_changement else None,
+            'motif': self.motif,
+            'created_by': self.created_by
+        }
+
+
 # Enregistrer les listeners d'audit
 register_audit_listeners(Product)
+register_audit_listeners(PriceHistory)

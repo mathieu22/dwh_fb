@@ -10,7 +10,8 @@ from app.extensions import db
 from app.models.order import Order, OrderItem, OrderStatus
 from app.schemas.order import (
     OrderSchema, OrderCreateSchema, OrderUpdateSchema,
-    OrderStatusUpdateSchema, OrderItemCreateSchema
+    OrderStatusUpdateSchema, OrderItemCreateSchema,
+    OrderPaymentSchema, OrderCancelSchema
 )
 from app.core.audit_mixin import set_current_user_id
 from app.core.security import role_required, UserRoles
@@ -634,7 +635,7 @@ def cancel_order(order_id):
     description: |
       Annule une commande et restaure les stocks si nécessaire.
       Si la commande était confirmée, les quantités sont réintégrées au stock.
-      Une raison d'annulation peut être fournie pour traçabilité.
+      Le motif d'annulation est OBLIGATOIRE.
       Les commandes déjà livrées ne peuvent pas être annulées.
       Requiert le rôle ADMIN ou CONTROLEUR.
     security:
@@ -647,17 +648,20 @@ def cancel_order(order_id):
         description: ID de la commande
       - in: body
         name: body
+        required: true
         schema:
           type: object
+          required:
+            - motif_annulation
           properties:
-            reason:
+            motif_annulation:
               type: string
-              description: Motif de l'annulation (optionnel mais recommandé)
+              description: Motif de l'annulation (obligatoire)
     responses:
       200:
         description: Commande annulée, stocks restaurés si applicable
       400:
-        description: Commande non annulable (déjà livrée)
+        description: Commande non annulable (déjà livrée) ou motif manquant
       403:
         description: Accès refusé (rôle insuffisant)
       404:
@@ -670,15 +674,102 @@ def cancel_order(order_id):
     if not order:
         return jsonify({'error': 'Commande non trouvée'}), 404
 
-    data = request.get_json() or {}
-    reason = data.get('reason')
+    schema = OrderCancelSchema()
 
     try:
-        order = OrderService.cancel_order(order, reason)
+        data = schema.load(request.get_json() or {})
+    except ValidationError as err:
+        return jsonify({'error': 'Données invalides', 'details': err.messages}), 400
+
+    try:
+        order = OrderService.cancel_order(order, data['motif_annulation'])
         db.session.commit()
 
         return jsonify({
             'message': 'Commande annulée avec succès',
+            'order': order.to_dict(include_items=True)
+        }), 200
+
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+
+@api_v1.route('/orders/<int:order_id>/pay', methods=['POST'])
+@jwt_required()
+@role_required(UserRoles.ADMIN, UserRoles.CONTROLEUR)
+def pay_order(order_id):
+    """
+    Enregistre le paiement d'une commande.
+    ---
+    tags:
+      - Orders
+    summary: Payer une commande
+    description: |
+      Enregistre les informations de paiement et passe la commande au statut 'payee'.
+      La commande doit être en statut 'confirmee' pour être payée.
+      Pour un paiement mobile money, le numéro et la référence sont obligatoires.
+      Requiert le rôle ADMIN ou CONTROLEUR.
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: order_id
+        type: integer
+        required: true
+        description: ID de la commande
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required:
+            - type_paiement
+            - montant_paye
+          properties:
+            type_paiement:
+              type: string
+              enum: [cash, mobile_money]
+              description: Type de paiement
+            montant_paye:
+              type: number
+              description: Montant payé
+            mobile_money_numero:
+              type: string
+              description: Numéro mobile money du client (requis si type=mobile_money)
+            mobile_money_ref:
+              type: string
+              description: Référence de la transaction (requis si type=mobile_money)
+    responses:
+      200:
+        description: Paiement enregistré avec succès
+      400:
+        description: Données invalides ou commande non payable
+      403:
+        description: Accès refusé (rôle insuffisant)
+      404:
+        description: Commande non trouvée
+    """
+    set_current_user_id(get_jwt_identity())
+
+    order = Order.query.filter_by(id=order_id, is_deleted=False).first()
+
+    if not order:
+        return jsonify({'error': 'Commande non trouvée'}), 404
+
+    schema = OrderPaymentSchema()
+
+    try:
+        data = schema.load(request.get_json())
+    except ValidationError as err:
+        return jsonify({'error': 'Données invalides', 'details': err.messages}), 400
+
+    try:
+        order = OrderService.pay_order(order, data)
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Paiement enregistré avec succès',
             'order': order.to_dict(include_items=True)
         }), 200
 

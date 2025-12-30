@@ -7,7 +7,7 @@ from marshmallow import ValidationError
 
 from . import api_v1
 from app.extensions import db
-from app.models.product import Product
+from app.models.product import Product, PriceHistory
 from app.models.stock import Stock
 from app.schemas.product import ProductSchema, ProductCreateSchema, ProductUpdateSchema
 from app.core.audit_mixin import set_current_user_id
@@ -312,6 +312,16 @@ def update_product(product_id):
         if not category:
             return jsonify({'error': 'Catégorie non trouvée'}), 400
 
+    # Enregistrer l'historique des prix si le prix change
+    if 'prix' in data and data['prix'] != float(product.prix):
+        price_history = PriceHistory(
+            product_id=product.id,
+            ancien_prix=product.prix,
+            nouveau_prix=data['prix'],
+            motif=data.get('motif_changement_prix')
+        )
+        db.session.add(price_history)
+
     # Mettre à jour les champs
     for field in ['nom', 'description', 'prix', 'photo_url', 'sku', 'is_active', 'category_id']:
         if field in data:
@@ -413,4 +423,59 @@ def toggle_product_status(product_id):
     return jsonify({
         'message': f"Produit {'activé' if product.is_active else 'désactivé'}",
         'product': product.to_dict()
+    }), 200
+
+
+@api_v1.route('/products/<int:product_id>/price-history', methods=['GET'])
+@jwt_required()
+def get_product_price_history(product_id):
+    """
+    Récupère l'historique des prix d'un produit.
+    ---
+    tags:
+      - Products
+    summary: Historique des prix
+    description: |
+      Retourne l'historique complet des changements de prix d'un produit.
+      Les entrées sont triées par date décroissante (plus récent en premier).
+      Inclut l'ancien prix, le nouveau prix, la date du changement et le motif si fourni.
+    security:
+      - Bearer: []
+    parameters:
+      - name: product_id
+        in: path
+        type: integer
+        required: true
+        description: ID du produit
+      - name: limit
+        in: query
+        type: integer
+        default: 50
+        description: Nombre maximum d'entrées à retourner
+    responses:
+      200:
+        description: Historique des prix
+      404:
+        description: Produit non trouvé
+    """
+    set_current_user_id(get_jwt_identity())
+
+    product = Product.query.filter_by(id=product_id, is_deleted=False).first()
+
+    if not product:
+        return jsonify({'error': 'Produit non trouvé'}), 404
+
+    limit = request.args.get('limit', 50, type=int)
+
+    history = PriceHistory.query.filter_by(product_id=product_id)\
+        .order_by(PriceHistory.date_changement.desc())\
+        .limit(limit)\
+        .all()
+
+    return jsonify({
+        'product_id': product_id,
+        'product_nom': product.nom,
+        'prix_actuel': float(product.prix),
+        'history': [h.to_dict() for h in history],
+        'count': len(history)
     }), 200
