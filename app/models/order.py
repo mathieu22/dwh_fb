@@ -20,6 +20,12 @@ class OrderStatus(str, Enum):
     ANNULEE = 'annulee'
 
 
+class ItemVerificationStatus(str, Enum):
+    """Statuts de vérification d'un article"""
+    A_VERIFIER = 'a_verifier'
+    OK = 'ok'
+
+
 class TypePaiement(str, Enum):
     """Types de paiement disponibles"""
     CASH = 'cash'
@@ -38,6 +44,21 @@ VALID_TRANSITIONS = {
 }
 
 
+class OrderHistoryEvent(str, Enum):
+    """Types d'événements de l'historique"""
+    CREATED = 'CREATED'
+    CONFIRMED = 'CONFIRMED'
+    PAID = 'PAID'
+    IN_PREPARATION = 'IN_PREPARATION'
+    IN_DELIVERY = 'IN_DELIVERY'
+    DELIVERED = 'DELIVERED'
+    CANCELLED = 'CANCELLED'
+    ITEM_ADDED = 'ITEM_ADDED'
+    ITEM_REMOVED = 'ITEM_REMOVED'
+    ITEM_UPDATED = 'ITEM_UPDATED'
+    COURIER_ASSIGNED = 'COURIER_ASSIGNED'
+
+
 class Order(db.Model, AuditMixin, SoftDeleteMixin):
     """
     Modèle Order - Commande avec workflow de statuts.
@@ -52,7 +73,9 @@ class Order(db.Model, AuditMixin, SoftDeleteMixin):
     client_nom = db.Column(db.String(200), nullable=False)
     client_telephone = db.Column(db.String(20), nullable=True)
     client_email = db.Column(db.String(255), nullable=True)
+    ville = db.Column(db.String(100), nullable=True)
     adresse_livraison = db.Column(db.Text, nullable=True)
+    date_souhaitee = db.Column(db.Date, nullable=True)  # Date de livraison souhaitée
 
     # Montants
     montant_total = db.Column(db.Numeric(12, 2), nullable=False, default=0)
@@ -85,6 +108,8 @@ class Order(db.Model, AuditMixin, SoftDeleteMixin):
     # Relations
     items = db.relationship('OrderItem', backref='order', lazy='joined', cascade='all, delete-orphan')
     livreur = db.relationship('User', foreign_keys=[livreur_id], backref='livraisons')
+    creator = db.relationship('User', foreign_keys=[user_id], backref='orders_created')
+    history = db.relationship('OrderHistory', backref='order', lazy='dynamic', order_by='OrderHistory.created_at.desc()')
 
     def __repr__(self):
         return f'<Order {self.numero}>'
@@ -141,6 +166,43 @@ class Order(db.Model, AuditMixin, SoftDeleteMixin):
         """Montant net après remise"""
         return float(self.montant_total)
 
+    @property
+    def items_count(self):
+        """Nombre total d'articles (somme des quantités)"""
+        return sum(item.quantity for item in self.items)
+
+    @property
+    def total_amount(self):
+        """Montant total calculé à partir des items"""
+        return float(self.montant_total) if self.montant_total else 0
+
+    @property
+    def is_paid(self):
+        """Vérifie si la commande est payée"""
+        return self.status in [OrderStatus.PAYEE.value, OrderStatus.EN_PREPARATION.value,
+                               OrderStatus.EN_LIVRAISON.value, OrderStatus.LIVREE.value]
+
+    def to_minimal_dict(self):
+        """Conversion en dictionnaire minimal (sans items)"""
+        return {
+            'id': self.id,
+            'order_number': self.numero,
+            'status': self.status,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'customer_name': self.client_nom,
+            'customer_phone': self.client_telephone,
+            'city': self.ville,
+            'address': self.adresse_livraison,
+            'desired_date': self.date_souhaitee.isoformat() if self.date_souhaitee else None,
+            'is_paid': self.is_paid,
+            'payment_type': self.type_paiement,
+            'payment_ref': self.mobile_money_ref,
+            'payment_sender_phone': self.mobile_money_numero,
+            'courier_name': f"{self.livreur.prenom} {self.livreur.nom}" if self.livreur else None,
+            'items_count': self.items_count,
+            'total_amount_ar': self.total_amount
+        }
+
     def to_dict(self, include_items=True):
         """Conversion en dictionnaire"""
         data = {
@@ -150,8 +212,12 @@ class Order(db.Model, AuditMixin, SoftDeleteMixin):
             'client_nom': self.client_nom,
             'client_telephone': self.client_telephone,
             'client_email': self.client_email,
+            'ville': self.ville,
             'adresse_livraison': self.adresse_livraison,
+            'date_souhaitee': self.date_souhaitee.isoformat() if self.date_souhaitee else None,
             'montant_total': float(self.montant_total) if self.montant_total else 0,
+            'items_count': self.items_count,
+            'total_amount_ar': self.total_amount,
             'montant_remise': float(self.montant_remise) if self.montant_remise else 0,
             'montant_livraison': float(self.montant_livraison) if self.montant_livraison else 0,
             'date_confirmation': self.date_confirmation.isoformat() if self.date_confirmation else None,
@@ -204,6 +270,11 @@ class OrderItem(db.Model, AuditMixin):
     quantity = db.Column(db.Integer, nullable=False, default=1)
     prix_unitaire = db.Column(db.Numeric(10, 2), nullable=False)
     prix_total = db.Column(db.Numeric(12, 2), nullable=False)
+    verification_status = db.Column(
+        db.String(20),
+        nullable=False,
+        default=ItemVerificationStatus.A_VERIFIER.value
+    )
 
     def __repr__(self):
         return f'<OrderItem Order:{self.order_id} Product:{self.product_id}>'
@@ -222,6 +293,7 @@ class OrderItem(db.Model, AuditMixin):
             'quantity': self.quantity,
             'prix_unitaire': float(self.prix_unitaire) if self.prix_unitaire else 0,
             'prix_total': float(self.prix_total) if self.prix_total else 0,
+            'verification_status': self.verification_status,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
@@ -242,6 +314,35 @@ class OrderItem(db.Model, AuditMixin):
             data['product'] = None
 
         return data
+
+
+class OrderHistory(db.Model):
+    """
+    Modèle OrderHistory - Historique des événements d'une commande.
+    """
+    __tablename__ = 'order_history'
+
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), nullable=False, index=True)
+    event = db.Column(db.String(50), nullable=False)
+    note = db.Column(db.Text, nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    # Relation vers l'utilisateur
+    user = db.relationship('User', backref='order_history_entries')
+
+    def __repr__(self):
+        return f'<OrderHistory Order:{self.order_id} Event:{self.event}>'
+
+    def to_dict(self):
+        """Conversion en dictionnaire"""
+        return {
+            'at': self.created_at.isoformat() if self.created_at else None,
+            'by': f"{self.user.prenom} {self.user.nom}" if self.user else None,
+            'event': self.event,
+            'note': self.note
+        }
 
 
 # Enregistrer les listeners d'audit
