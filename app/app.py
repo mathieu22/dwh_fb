@@ -31,8 +31,8 @@ SWAGGER_CONFIG = {
 SWAGGER_TEMPLATE = {
     "info": {
         "title": "Dashboard FB API",
-        "description": "API REST pour la gestion des commandes, produits, stocks et utilisateurs avec historisation complète.",
-        "version": "1.1.0",
+        "description": "API REST pour la gestion des commandes, produits, stocks et utilisateurs avec historisation complète.\n\n## Changelog v1.2.0\n- Comptage des commandes par statut\n- Vérification des articles\n- Modification quantité article\n- Liste minimale des commandes\n- Historique des commandes",
+        "version": "1.2.0",
         "contact": {
             "name": "Support API",
             "email": "support@example.com"
@@ -55,8 +55,73 @@ SWAGGER_TEMPLATE = {
         {"name": "Categories", "description": "Gestion des catégories"},
         {"name": "Users", "description": "Gestion des utilisateurs"},
         {"name": "Stocks", "description": "Gestion des stocks et mouvements"},
-        {"name": "Orders", "description": "Gestion des commandes"}
-    ]
+        {"name": "Orders", "description": "Gestion des commandes avec workflow complet"}
+    ],
+    "definitions": {
+        "Error": {
+            "type": "object",
+            "properties": {
+                "error": {"type": "string", "description": "Message d'erreur"},
+                "message": {"type": "string", "description": "Description détaillée"}
+            }
+        },
+        "OrderMinimal": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer"},
+                "order_number": {"type": "string"},
+                "status": {"type": "string"},
+                "created_at": {"type": "string", "format": "date-time"},
+                "customer_name": {"type": "string"},
+                "customer_phone": {"type": "string"},
+                "city": {"type": "string"},
+                "address": {"type": "string"},
+                "desired_date": {"type": "string", "format": "date"},
+                "is_paid": {"type": "boolean"},
+                "payment_type": {"type": "string"},
+                "payment_ref": {"type": "string"},
+                "payment_sender_phone": {"type": "string"},
+                "courier_name": {"type": "string"},
+                "items_count": {"type": "integer"},
+                "total_amount_ar": {"type": "number"}
+            }
+        },
+        "OrderHistory": {
+            "type": "object",
+            "properties": {
+                "at": {"type": "string", "format": "date-time"},
+                "by": {"type": "string"},
+                "event": {"type": "string", "enum": ["CREATED", "CONFIRMED", "PAID", "IN_PREPARATION", "IN_DELIVERY", "DELIVERED", "CANCELLED"]},
+                "note": {"type": "string"}
+            }
+        },
+        "OrderItem": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer"},
+                "order_id": {"type": "integer"},
+                "product_id": {"type": "integer"},
+                "quantity": {"type": "integer"},
+                "prix_unitaire": {"type": "number"},
+                "prix_total": {"type": "number"},
+                "verification_status": {"type": "string", "enum": ["a_verifier", "ok"]},
+                "product": {"type": "object"}
+            }
+        },
+        "StatusCounts": {
+            "type": "object",
+            "properties": {
+                "tous": {"type": "integer"},
+                "brouillon": {"type": "integer"},
+                "confirmee": {"type": "integer"},
+                "payee": {"type": "integer"},
+                "en_preparation": {"type": "integer"},
+                "en_livraison": {"type": "integer"},
+                "livree": {"type": "integer"},
+                "annulee": {"type": "integer"}
+            }
+        }
+    }
 }
 
 

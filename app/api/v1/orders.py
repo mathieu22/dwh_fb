@@ -75,6 +75,45 @@ def get_orders():
     responses:
       200:
         description: Liste paginée des commandes
+        schema:
+          type: object
+          properties:
+            data:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  numero:
+                    type: string
+                  status:
+                    type: string
+                  client_nom:
+                    type: string
+                  client_telephone:
+                    type: string
+                  montant_total:
+                    type: number
+                  items_count:
+                    type: integer
+                  total_amount_ar:
+                    type: number
+                  created_at:
+                    type: string
+                    format: date-time
+            total:
+              type: integer
+            pages:
+              type: integer
+            current_page:
+              type: integer
+            per_page:
+              type: integer
+      401:
+        description: Non authentifié
+        schema:
+          $ref: '#/definitions/Error'
     """
     set_current_user_id(get_jwt_identity())
 
@@ -135,8 +174,60 @@ def get_order(order_id):
     responses:
       200:
         description: Détail complet de la commande avec articles
+        schema:
+          type: object
+          properties:
+            order:
+              type: object
+              properties:
+                id:
+                  type: integer
+                numero:
+                  type: string
+                status:
+                  type: string
+                  enum: [brouillon, confirmee, payee, en_preparation, en_livraison, livree, annulee]
+                client_nom:
+                  type: string
+                client_telephone:
+                  type: string
+                client_email:
+                  type: string
+                ville:
+                  type: string
+                adresse_livraison:
+                  type: string
+                date_souhaitee:
+                  type: string
+                  format: date
+                montant_total:
+                  type: number
+                items_count:
+                  type: integer
+                total_amount_ar:
+                  type: number
+                items:
+                  type: array
+                  items:
+                    $ref: '#/definitions/OrderItem'
+                livreur:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    nom:
+                      type: string
+                    prenom:
+                      type: string
+                    telephone:
+                      type: string
+                created_at:
+                  type: string
+                  format: date-time
       404:
         description: Commande non trouvée
+        schema:
+          $ref: '#/definitions/Error'
     """
     set_current_user_id(get_jwt_identity())
 
@@ -171,8 +262,16 @@ def get_order_by_numero(numero):
     responses:
       200:
         description: Détail complet de la commande
+        schema:
+          type: object
+          properties:
+            order:
+              type: object
+              description: Même structure que GET /orders/{id}
       404:
         description: Commande non trouvée
+        schema:
+          $ref: '#/definitions/Error'
     """
     set_current_user_id(get_jwt_identity())
 
@@ -227,8 +326,25 @@ def create_order():
     responses:
       201:
         description: Commande créée avec succès
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Commande créée avec succès
+            order:
+              type: object
+              description: Commande créée avec ses articles
       400:
         description: Données invalides
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+            details:
+              type: object
+              description: Détails des erreurs de validation
     """
     user_id = get_jwt_identity()
     set_current_user_id(user_id)
@@ -291,10 +407,23 @@ def update_order(order_id):
     responses:
       200:
         description: Commande mise à jour avec succès
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Commande mise à jour avec succès
+            order:
+              type: object
+              description: Commande mise à jour
       400:
         description: Commande non modifiable (statut != brouillon)
+        schema:
+          $ref: '#/definitions/Error'
       404:
         description: Commande non trouvée
+        schema:
+          $ref: '#/definitions/Error'
     """
     set_current_user_id(get_jwt_identity())
 
@@ -348,12 +477,24 @@ def delete_order(order_id):
     responses:
       200:
         description: Commande supprimée avec succès
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Commande supprimée avec succès
       400:
         description: Commande non supprimable (statut invalide)
+        schema:
+          $ref: '#/definitions/Error'
       403:
         description: Accès refusé (rôle ADMIN requis)
+        schema:
+          $ref: '#/definitions/Error'
       404:
         description: Commande non trouvée
+        schema:
+          $ref: '#/definitions/Error'
     """
     set_current_user_id(get_jwt_identity())
 
@@ -412,10 +553,23 @@ def add_order_item(order_id):
     responses:
       201:
         description: Article ajouté avec succès
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Article ajouté avec succès
+            order:
+              type: object
+              description: Commande mise à jour avec tous ses articles
       400:
         description: Données invalides ou commande non modifiable
+        schema:
+          $ref: '#/definitions/Error'
       404:
         description: Commande ou produit non trouvé
+        schema:
+          $ref: '#/definitions/Error'
     """
     set_current_user_id(get_jwt_identity())
 
@@ -485,10 +639,38 @@ def update_order_item(order_id, item_id):
     responses:
       200:
         description: Quantité mise à jour avec succès
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Quantité mise à jour avec succès
+            order:
+              type: object
+              description: Commande mise à jour avec tous ses articles
+        examples:
+          application/json:
+            message: Quantité mise à jour avec succès
+            order:
+              id: 123
+              numero: "CMD-20260102-123"
+              status: "brouillon"
+              montant_total: 45000
+              items_count: 3
+              items:
+                - id: 1
+                  product_id: 45
+                  quantity: 3
+                  prix_unitaire: 15000
+                  prix_total: 45000
       400:
         description: Données invalides ou commande non modifiable
+        schema:
+          $ref: '#/definitions/Error'
       404:
         description: Commande ou article non trouvé
+        schema:
+          $ref: '#/definitions/Error'
     """
     set_current_user_id(get_jwt_identity())
 
@@ -552,10 +734,23 @@ def remove_order_item(order_id, item_id):
     responses:
       200:
         description: Article supprimé avec succès
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Article supprimé avec succès
+            order:
+              type: object
+              description: Commande mise à jour
       400:
         description: Commande non modifiable
+        schema:
+          $ref: '#/definitions/Error'
       404:
         description: Commande ou article non trouvé
+        schema:
+          $ref: '#/definitions/Error'
     """
     set_current_user_id(get_jwt_identity())
 
@@ -602,10 +797,23 @@ def confirm_order(order_id):
     responses:
       200:
         description: Commande confirmée, stocks décrémentés
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Commande confirmée avec succès
+            order:
+              type: object
+              description: Commande confirmée
       400:
         description: Stock insuffisant ou commande vide
+        schema:
+          $ref: '#/definitions/Error'
       404:
         description: Commande non trouvée
+        schema:
+          $ref: '#/definitions/Error'
     """
     set_current_user_id(get_jwt_identity())
 
@@ -666,12 +874,27 @@ def update_order_status(order_id):
     responses:
       200:
         description: Statut mis à jour avec succès
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Statut mis à jour: en_preparation"
+            order:
+              type: object
+              description: Commande avec nouveau statut
       400:
         description: Transition de statut invalide
+        schema:
+          $ref: '#/definitions/Error'
       403:
         description: Accès refusé (rôle insuffisant)
+        schema:
+          $ref: '#/definitions/Error'
       404:
         description: Commande non trouvée
+        schema:
+          $ref: '#/definitions/Error'
     """
     set_current_user_id(get_jwt_identity())
 
@@ -739,12 +962,27 @@ def cancel_order(order_id):
     responses:
       200:
         description: Commande annulée, stocks restaurés si applicable
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Commande annulée avec succès
+            order:
+              type: object
+              description: Commande annulée avec motif
       400:
         description: Commande non annulable (déjà livrée) ou motif manquant
+        schema:
+          $ref: '#/definitions/Error'
       403:
         description: Accès refusé (rôle insuffisant)
+        schema:
+          $ref: '#/definitions/Error'
       404:
         description: Commande non trouvée
+        schema:
+          $ref: '#/definitions/Error'
     """
     set_current_user_id(get_jwt_identity())
 
@@ -822,12 +1060,27 @@ def pay_order(order_id):
     responses:
       200:
         description: Paiement enregistré avec succès
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Paiement enregistré avec succès
+            order:
+              type: object
+              description: Commande avec informations de paiement
       400:
         description: Données invalides ou commande non payable
+        schema:
+          $ref: '#/definitions/Error'
       403:
         description: Accès refusé (rôle insuffisant)
+        schema:
+          $ref: '#/definitions/Error'
       404:
         description: Commande non trouvée
+        schema:
+          $ref: '#/definitions/Error'
     """
     set_current_user_id(get_jwt_identity())
 
@@ -894,12 +1147,43 @@ def assign_livreur(order_id):
     responses:
       200:
         description: Livreur assigné avec succès
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Livreur assigné avec succès
+            order:
+              type: object
+              description: Commande avec livreur assigné
+              properties:
+                id:
+                  type: integer
+                numero:
+                  type: string
+                livreur:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    nom:
+                      type: string
+                    prenom:
+                      type: string
+                    telephone:
+                      type: string
       400:
         description: Utilisateur invalide ou n'est pas livreur
+        schema:
+          $ref: '#/definitions/Error'
       403:
         description: Accès refusé (rôle insuffisant)
+        schema:
+          $ref: '#/definitions/Error'
       404:
         description: Commande ou livreur non trouvé
+        schema:
+          $ref: '#/definitions/Error'
     """
     set_current_user_id(get_jwt_identity())
 
@@ -943,6 +1227,25 @@ def get_order_statuses():
     responses:
       200:
         description: Liste des statuts disponibles
+        schema:
+          type: object
+          properties:
+            statuses:
+              type: array
+              items:
+                type: string
+                enum: [brouillon, confirmee, payee, en_preparation, en_livraison, livree, annulee]
+              description: Liste de tous les statuts possibles
+        examples:
+          application/json:
+            statuses:
+              - brouillon
+              - confirmee
+              - payee
+              - en_preparation
+              - en_livraison
+              - livree
+              - annulee
     """
     return jsonify({
         'statuses': [s.value for s in OrderStatus]
@@ -1059,8 +1362,29 @@ def verify_order_item(order_id, item_id):
     responses:
       200:
         description: Statut de vérification mis à jour
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: Statut de vérification mis à jour
+            item:
+              $ref: '#/definitions/OrderItem'
+        examples:
+          application/json:
+            message: Statut de vérification mis à jour
+            item:
+              id: 1
+              order_id: 123
+              product_id: 45
+              quantity: 2
+              prix_unitaire: 15000
+              prix_total: 30000
+              verification_status: ok
       404:
         description: Commande ou article non trouvé
+        schema:
+          $ref: '#/definitions/Error'
     """
     set_current_user_id(get_jwt_identity())
 
@@ -1128,10 +1452,43 @@ def verify_all_order_items(order_id):
     responses:
       200:
         description: Statuts de vérification mis à jour
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Tous les articles sont maintenant: ok"
+            order:
+              type: object
+              description: Commande avec tous ses articles mis à jour
+              properties:
+                id:
+                  type: integer
+                numero:
+                  type: string
+                items:
+                  type: array
+                  items:
+                    $ref: '#/definitions/OrderItem'
+        examples:
+          application/json:
+            message: "Tous les articles sont maintenant: ok"
+            order:
+              id: 123
+              numero: "CMD-20260102-123"
+              items:
+                - id: 1
+                  verification_status: ok
+                - id: 2
+                  verification_status: ok
       400:
         description: Statut invalide
+        schema:
+          $ref: '#/definitions/Error'
       404:
         description: Commande non trouvée
+        schema:
+          $ref: '#/definitions/Error'
     """
     set_current_user_id(get_jwt_identity())
 
@@ -1209,6 +1566,52 @@ def get_orders_minimal_info():
     responses:
       200:
         description: Liste paginée des commandes (format minimal)
+        schema:
+          type: object
+          properties:
+            orders:
+              type: array
+              items:
+                $ref: '#/definitions/OrderMinimal'
+            total:
+              type: integer
+              description: Nombre total de commandes
+            pages:
+              type: integer
+              description: Nombre de pages
+            current_page:
+              type: integer
+            per_page:
+              type: integer
+            has_next:
+              type: boolean
+            has_prev:
+              type: boolean
+        examples:
+          application/json:
+            orders:
+              - id: 123
+                order_number: "CMD-20260102-123"
+                status: "confirmee"
+                created_at: "2026-01-02T10:00:00"
+                customer_name: "Rakoto"
+                customer_phone: "0341234567"
+                city: "Antananarivo"
+                address: "Behoririka"
+                desired_date: "2026-01-03"
+                is_paid: false
+                payment_type: null
+                payment_ref: null
+                payment_sender_phone: null
+                courier_name: null
+                items_count: 5
+                total_amount_ar: 26000
+            total: 15
+            pages: 1
+            current_page: 1
+            per_page: 20
+            has_next: false
+            has_prev: false
     """
     set_current_user_id(get_jwt_identity())
 
@@ -1281,8 +1684,38 @@ def get_order_history(order_id):
     responses:
       200:
         description: Historique de la commande
+        schema:
+          type: object
+          properties:
+            order_id:
+              type: integer
+            order_number:
+              type: string
+            history:
+              type: array
+              items:
+                $ref: '#/definitions/OrderHistory'
+        examples:
+          application/json:
+            order_id: 123
+            order_number: "CMD-20260102-123"
+            history:
+              - at: "2026-01-02T10:00:00"
+                by: "Rakoto Jean"
+                event: "CREATED"
+                note: null
+              - at: "2026-01-02T10:05:00"
+                by: "Rakoto Jean"
+                event: "CONFIRMED"
+                note: null
+              - at: "2026-01-02T11:00:00"
+                by: "Rabe Paul"
+                event: "PAID"
+                note: "Paiement Mobile Money"
       404:
         description: Commande non trouvée
+        schema:
+          $ref: '#/definitions/Error'
     """
     set_current_user_id(get_jwt_identity())
 
