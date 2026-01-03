@@ -197,6 +197,9 @@ def get_order(order_id):
                   type: string
                 adresse_livraison:
                   type: string
+                repere:
+                  type: string
+                  description: Point de repère pour la livraison
                 date_souhaitee:
                   type: string
                   format: date
@@ -314,6 +317,15 @@ def create_order():
               type: string
             client_telephone:
               type: string
+            ville:
+              type: string
+              description: Ville de livraison
+            adresse_livraison:
+              type: string
+              description: Adresse de livraison
+            repere:
+              type: string
+              description: Point de repère pour la livraison
             items:
               type: array
               items:
@@ -401,9 +413,15 @@ def update_order(order_id):
             client_telephone:
               type: string
               description: Téléphone du client
-            client_adresse:
+            ville:
+              type: string
+              description: Ville de livraison
+            adresse_livraison:
               type: string
               description: Adresse de livraison
+            repere:
+              type: string
+              description: Point de repère pour la livraison
     responses:
       200:
         description: Commande mise à jour avec succès
@@ -1591,21 +1609,22 @@ def get_orders_minimal_info():
           application/json:
             orders:
               - id: 123
-                order_number: "CMD-20260102-123"
+                numero: "CMD-20260102-123"
                 status: "confirmee"
                 created_at: "2026-01-02T10:00:00"
-                customer_name: "Rakoto"
-                customer_phone: "0341234567"
-                city: "Antananarivo"
-                address: "Behoririka"
-                desired_date: "2026-01-03"
-                is_paid: false
-                payment_type: null
-                payment_ref: null
-                payment_sender_phone: null
-                courier_name: null
-                items_count: 5
-                total_amount_ar: 26000
+                client_nom: "Rakoto"
+                client_telephone: "0341234567"
+                ville: "Antananarivo"
+                adresse_livraison: "Behoririka"
+                repere: "Près de la pharmacie"
+                date_souhaitee: "2026-01-03"
+                est_paye: false
+                type_paiement: null
+                mobile_money_ref: null
+                mobile_money_numero: null
+                livreur_nom: null
+                items_count: 2
+                montant_total: 26000
             total: 15
             pages: 1
             current_page: 1

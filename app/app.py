@@ -31,8 +31,8 @@ SWAGGER_CONFIG = {
 SWAGGER_TEMPLATE = {
     "info": {
         "title": "Dashboard FB API",
-        "description": "API REST pour la gestion des commandes, produits, stocks et utilisateurs avec historisation complète.\n\n## Changelog v1.2.0\n- Comptage des commandes par statut\n- Vérification des articles\n- Modification quantité article\n- Liste minimale des commandes\n- Historique des commandes",
-        "version": "1.2.0",
+        "description": "API REST pour la gestion des commandes, produits, stocks et utilisateurs avec historisation complète.\n\n## Changelog v1.2.1\n- Ajout du champ repere (point de repère livraison)\n\n## Changelog v1.2.0\n- Comptage des commandes par statut\n- Vérification des articles\n- Modification quantité article\n- Liste minimale des commandes\n- Historique des commandes",
+        "version": "1.2.1",
         "contact": {
             "name": "Support API",
             "email": "support@example.com"
@@ -69,21 +69,22 @@ SWAGGER_TEMPLATE = {
             "type": "object",
             "properties": {
                 "id": {"type": "integer"},
-                "order_number": {"type": "string"},
+                "numero": {"type": "string", "description": "Numéro de commande"},
                 "status": {"type": "string"},
                 "created_at": {"type": "string", "format": "date-time"},
-                "customer_name": {"type": "string"},
-                "customer_phone": {"type": "string"},
-                "city": {"type": "string"},
-                "address": {"type": "string"},
-                "desired_date": {"type": "string", "format": "date"},
-                "is_paid": {"type": "boolean"},
-                "payment_type": {"type": "string"},
-                "payment_ref": {"type": "string"},
-                "payment_sender_phone": {"type": "string"},
-                "courier_name": {"type": "string"},
-                "items_count": {"type": "integer"},
-                "total_amount_ar": {"type": "number"}
+                "client_nom": {"type": "string"},
+                "client_telephone": {"type": "string"},
+                "ville": {"type": "string"},
+                "adresse_livraison": {"type": "string"},
+                "repere": {"type": "string", "description": "Point de repère pour la livraison"},
+                "date_souhaitee": {"type": "string", "format": "date"},
+                "est_paye": {"type": "boolean"},
+                "type_paiement": {"type": "string"},
+                "mobile_money_ref": {"type": "string"},
+                "mobile_money_numero": {"type": "string"},
+                "livreur_nom": {"type": "string"},
+                "items_count": {"type": "integer", "description": "Nombre de lignes d'articles distinctes"},
+                "montant_total": {"type": "number"}
             }
         },
         "OrderHistory": {

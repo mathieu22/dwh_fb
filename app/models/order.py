@@ -75,6 +75,7 @@ class Order(db.Model, AuditMixin, SoftDeleteMixin):
     client_email = db.Column(db.String(255), nullable=True)
     ville = db.Column(db.String(100), nullable=True)
     adresse_livraison = db.Column(db.Text, nullable=True)
+    repere = db.Column(db.Text, nullable=True)  # Point de repère pour la livraison
     date_souhaitee = db.Column(db.Date, nullable=True)  # Date de livraison souhaitée
 
     # Montants
@@ -168,8 +169,8 @@ class Order(db.Model, AuditMixin, SoftDeleteMixin):
 
     @property
     def items_count(self):
-        """Nombre total d'articles (somme des quantités)"""
-        return sum(item.quantity for item in self.items)
+        """Nombre de lignes d'articles distinctes dans la commande"""
+        return len(self.items)
 
     @property
     def total_amount(self):
@@ -186,21 +187,22 @@ class Order(db.Model, AuditMixin, SoftDeleteMixin):
         """Conversion en dictionnaire minimal (sans items)"""
         return {
             'id': self.id,
-            'order_number': self.numero,
+            'numero': self.numero,
             'status': self.status,
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'customer_name': self.client_nom,
-            'customer_phone': self.client_telephone,
-            'city': self.ville,
-            'address': self.adresse_livraison,
-            'desired_date': self.date_souhaitee.isoformat() if self.date_souhaitee else None,
-            'is_paid': self.is_paid,
-            'payment_type': self.type_paiement,
-            'payment_ref': self.mobile_money_ref,
-            'payment_sender_phone': self.mobile_money_numero,
-            'courier_name': f"{self.livreur.prenom} {self.livreur.nom}" if self.livreur else None,
+            'client_nom': self.client_nom,
+            'client_telephone': self.client_telephone,
+            'ville': self.ville,
+            'adresse_livraison': self.adresse_livraison,
+            'repere': self.repere,
+            'date_souhaitee': self.date_souhaitee.isoformat() if self.date_souhaitee else None,
+            'est_paye': self.is_paid,
+            'type_paiement': self.type_paiement,
+            'mobile_money_ref': self.mobile_money_ref,
+            'mobile_money_numero': self.mobile_money_numero,
+            'livreur_nom': f"{self.livreur.prenom} {self.livreur.nom}" if self.livreur else None,
             'items_count': self.items_count,
-            'total_amount_ar': self.total_amount
+            'montant_total': self.total_amount
         }
 
     def to_dict(self, include_items=True):
@@ -214,6 +216,7 @@ class Order(db.Model, AuditMixin, SoftDeleteMixin):
             'client_email': self.client_email,
             'ville': self.ville,
             'adresse_livraison': self.adresse_livraison,
+            'repere': self.repere,
             'date_souhaitee': self.date_souhaitee.isoformat() if self.date_souhaitee else None,
             'montant_total': float(self.montant_total) if self.montant_total else 0,
             'items_count': self.items_count,
