@@ -31,8 +31,8 @@ SWAGGER_CONFIG = {
 SWAGGER_TEMPLATE = {
     "info": {
         "title": "Dashboard FB API",
-        "description": "API REST pour la gestion des commandes, produits, stocks et utilisateurs avec historisation complète.\n\n## Changelog v1.2.2\n- Ajout du champ est_paye (boolean) dans tous les endpoints\n- Paiement flexible: peut être fait à tout moment (indépendant du flux)\n- Nouveau workflow: brouillon → confirmee → en_preparation → en_livraison → livree\n\n## Changelog v1.2.1\n- Ajout du champ repere (point de repère livraison)\n- Standardisation des noms de champs en français\n- Correction items_count (nombre de lignes distinctes)\n\n## Changelog v1.2.0\n- Comptage des commandes par statut\n- Vérification des articles\n- Modification quantité article\n- Liste minimale des commandes\n- Historique des commandes",
-        "version": "1.2.2",
+        "description": "API REST pour la gestion des commandes, produits, stocks et utilisateurs avec historisation complète.\n\n## Changelog v1.2.3\n- Ajout objet livreur complet (id, nom, prenom, telephone) dans /orders_minimal_info\n\n## Changelog v1.2.2\n- Ajout du champ est_paye (boolean) dans tous les endpoints\n- Paiement flexible: peut être fait à tout moment (indépendant du flux)\n- Nouveau workflow: brouillon → confirmee → en_preparation → en_livraison → livree\n\n## Changelog v1.2.1\n- Ajout du champ repere (point de repère livraison)\n- Standardisation des noms de champs en français\n- Correction items_count (nombre de lignes distinctes)\n\n## Changelog v1.2.0\n- Comptage des commandes par statut\n- Vérification des articles\n- Modification quantité article\n- Liste minimale des commandes\n- Historique des commandes",
+        "version": "1.2.3",
         "contact": {
             "name": "Support API",
             "email": "support@example.com"
@@ -82,7 +82,17 @@ SWAGGER_TEMPLATE = {
                 "type_paiement": {"type": "string"},
                 "mobile_money_ref": {"type": "string"},
                 "mobile_money_numero": {"type": "string"},
-                "livreur_nom": {"type": "string"},
+                "livreur_id": {"type": "integer"},
+                "livreur": {
+                    "type": "object",
+                    "description": "Informations du livreur assigné",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "nom": {"type": "string"},
+                        "prenom": {"type": "string"},
+                        "telephone": {"type": "string"}
+                    }
+                },
                 "items_count": {"type": "integer", "description": "Nombre de lignes d'articles distinctes"},
                 "montant_total": {"type": "number"}
             }

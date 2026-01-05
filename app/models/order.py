@@ -201,7 +201,13 @@ class Order(db.Model, AuditMixin, SoftDeleteMixin):
             'type_paiement': self.type_paiement,
             'mobile_money_ref': self.mobile_money_ref,
             'mobile_money_numero': self.mobile_money_numero,
-            'livreur_nom': f"{self.livreur.prenom} {self.livreur.nom}" if self.livreur else None,
+            'livreur_id': self.livreur_id,
+            'livreur': {
+                'id': self.livreur.id,
+                'nom': self.livreur.nom,
+                'prenom': self.livreur.prenom,
+                'telephone': self.livreur.telephone
+            } if self.livreur else None,
             'items_count': self.items_count,
             'montant_total': self.total_amount
         }
