@@ -867,19 +867,22 @@ def update_order_status(order_id):
     description: |
       Fait progresser une commande dans le workflow de traitement.
 
-      **Workflow complet:**
+      **Workflow des statuts:**
       ```
-      brouillon → confirmee → payee → en_preparation → en_livraison → livree
+      brouillon → confirmee → en_preparation → en_livraison → livree
       ```
 
       **Transitions valides par statut:**
       - brouillon → confirmee, annulee
-      - confirmee → payee, annulee
-      - payee → en_preparation, annulee
+      - confirmee → en_preparation, annulee
       - en_preparation → en_livraison, annulee
       - en_livraison → livree, annulee
       - livree → (aucune)
       - annulee → (aucune)
+
+      **Note sur le paiement:**
+      Le paiement est indépendant du flux de statuts. Utilisez `POST /orders/{id}/pay`
+      pour enregistrer un paiement à tout moment. Le champ `est_paye` indique si payé.
 
       Les transitions invalides sont rejetées avec erreur 400.
       Requiert un des rôles: ADMIN, CONTROLEUR ou LIVREUR.
@@ -1055,8 +1058,12 @@ def pay_order(order_id):
       - Orders
     summary: Payer une commande
     description: |
-      Enregistre les informations de paiement et passe la commande au statut 'payee'.
-      La commande doit être en statut 'confirmee' pour être payée.
+      Enregistre les informations de paiement d'une commande.
+
+      **Le paiement peut être fait à tout moment** (sauf brouillon et annulee).
+      Le paiement ne change pas le statut de la commande - il est indépendant du flux.
+
+      Le champ `est_paye` sera mis à `true` après paiement.
       Pour un paiement mobile money, le numéro et la référence sont obligatoires.
       Requiert le rôle ADMIN ou CONTROLEUR.
     security:

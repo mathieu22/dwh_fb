@@ -33,10 +33,12 @@ class TypePaiement(str, Enum):
 
 
 # Transitions valides du workflow
+# Note: Le paiement (est_paye) est indépendant du flux de statuts
+# Il peut être enregistré à tout moment via POST /orders/{id}/pay
 VALID_TRANSITIONS = {
     OrderStatus.BROUILLON: [OrderStatus.CONFIRMEE, OrderStatus.ANNULEE],
-    OrderStatus.CONFIRMEE: [OrderStatus.PAYEE, OrderStatus.ANNULEE],
-    OrderStatus.PAYEE: [OrderStatus.EN_PREPARATION, OrderStatus.ANNULEE],
+    OrderStatus.CONFIRMEE: [OrderStatus.EN_PREPARATION, OrderStatus.ANNULEE],
+    OrderStatus.PAYEE: [OrderStatus.EN_PREPARATION, OrderStatus.ANNULEE],  # Gardé pour rétrocompatibilité
     OrderStatus.EN_PREPARATION: [OrderStatus.EN_LIVRAISON, OrderStatus.ANNULEE],
     OrderStatus.EN_LIVRAISON: [OrderStatus.LIVREE, OrderStatus.ANNULEE],
     OrderStatus.LIVREE: [],
@@ -179,9 +181,8 @@ class Order(db.Model, AuditMixin, SoftDeleteMixin):
 
     @property
     def is_paid(self):
-        """Vérifie si la commande est payée"""
-        return self.status in [OrderStatus.PAYEE.value, OrderStatus.EN_PREPARATION.value,
-                               OrderStatus.EN_LIVRAISON.value, OrderStatus.LIVREE.value]
+        """Vérifie si la commande est payée (basé sur date_paiement)"""
+        return self.date_paiement is not None
 
     def to_minimal_dict(self):
         """Conversion en dictionnaire minimal (sans items)"""
@@ -240,7 +241,8 @@ class Order(db.Model, AuditMixin, SoftDeleteMixin):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'created_by': self.created_by,
-            'updated_by': self.updated_by
+            'updated_by': self.updated_by,
+            'est_paye': self.is_paid
         }
 
         # Ajouter les coordonnées du livreur si assigné

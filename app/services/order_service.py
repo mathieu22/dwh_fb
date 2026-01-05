@@ -189,10 +189,20 @@ class OrderService:
     @staticmethod
     def pay_order(order, payment_data):
         """
-        Enregistre le paiement d'une commande et passe au statut PAYEE.
+        Enregistre le paiement d'une commande.
+        Le paiement peut être fait à tout moment (sauf brouillon, annulee).
+        Ne change pas le statut - juste enregistre les infos de paiement.
         """
-        if not order.can_transition_to(OrderStatus.PAYEE):
-            raise ValueError(f"Transition invalide depuis le statut {order.status}. La commande doit être confirmée.")
+        from datetime import datetime
+
+        # Vérifier que la commande peut être payée
+        forbidden_statuses = [OrderStatus.BROUILLON.value, OrderStatus.ANNULEE.value]
+        if order.status in forbidden_statuses:
+            raise ValueError(f"Impossible de payer une commande en statut {order.status}")
+
+        # Vérifier si déjà payée
+        if order.date_paiement is not None:
+            raise ValueError("Cette commande est déjà payée")
 
         type_paiement = payment_data.get('type_paiement')
         montant_paye = payment_data.get('montant_paye')
@@ -213,9 +223,7 @@ class OrderService:
         order.montant_paye = montant_paye
         order.mobile_money_numero = payment_data.get('mobile_money_numero')
         order.mobile_money_ref = payment_data.get('mobile_money_ref')
-
-        # Mettre à jour le statut
-        order.update_status(OrderStatus.PAYEE)
+        order.date_paiement = datetime.utcnow()
 
         return order
 
