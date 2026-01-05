@@ -866,8 +866,22 @@ def update_order_status(order_id):
     summary: Changer le statut
     description: |
       Fait progresser une commande dans le workflow de traitement.
-      Workflow: brouillon → confirmee → en_preparation → en_livraison → livree.
-      Les transitions invalides sont rejetées (ex: brouillon → livree directement).
+
+      **Workflow complet:**
+      ```
+      brouillon → confirmee → payee → en_preparation → en_livraison → livree
+      ```
+
+      **Transitions valides par statut:**
+      - brouillon → confirmee, annulee
+      - confirmee → payee, annulee
+      - payee → en_preparation, annulee
+      - en_preparation → en_livraison, annulee
+      - en_livraison → livree, annulee
+      - livree → (aucune)
+      - annulee → (aucune)
+
+      Les transitions invalides sont rejetées avec erreur 400.
       Requiert un des rôles: ADMIN, CONTROLEUR ou LIVREUR.
     security:
       - Bearer: []
@@ -887,7 +901,7 @@ def update_order_status(order_id):
           properties:
             status:
               type: string
-              enum: [brouillon, confirmee, en_preparation, en_livraison, livree, annulee]
+              enum: [brouillon, confirmee, payee, en_preparation, en_livraison, livree, annulee]
               description: Nouveau statut de la commande
     responses:
       200:
