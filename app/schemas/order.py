@@ -82,7 +82,7 @@ class OrderSchema(Schema):
     livreur = fields.Nested(LivreurSchema, allow_none=True)
     items = fields.Nested(OrderItemSchema, many=True)
     items_count = fields.Int(dump_only=True)
-    est_paye = fields.Bool(dump_only=True)
+    est_paye = fields.Bool(dump_only=True, attribute='is_paid')
     created_at = fields.DateTime(dump_only=True)
     updated_at = fields.DateTime(dump_only=True)
     created_by = fields.Int(dump_only=True)
