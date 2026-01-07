@@ -40,6 +40,9 @@ Faker==21.0.0
 # Utils
 python-dateutil==2.8.2
 
+# Image Processing
+Pillow==10.2.0
+
 # Documentation (optionnel)
 flasgger==0.9.7.1
 apispec==6.3.0

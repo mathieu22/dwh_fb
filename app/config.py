@@ -33,6 +33,14 @@ class Config:
     DEFAULT_PAGE_SIZE = int(os.getenv('DEFAULT_PAGE_SIZE', 20))
     MAX_PAGE_SIZE = int(os.getenv('MAX_PAGE_SIZE', 100))
 
+    # File Uploads
+    UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads'))
+    UPLOAD_BASE_URL = os.getenv('UPLOAD_BASE_URL', 'http://localhost:5000')
+    MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH', 5 * 1024 * 1024))  # 5MB par défaut
+    ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+    MAX_IMAGE_SIZE = (800, 800)  # Taille max pour redimensionnement
+    THUMBNAIL_SIZE = (200, 200)  # Taille des miniatures
+
 
 class DevelopmentConfig(Config):
     """Configuration de développement"""

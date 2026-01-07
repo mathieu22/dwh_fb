@@ -55,7 +55,8 @@ SWAGGER_TEMPLATE = {
         {"name": "Categories", "description": "Gestion des catégories"},
         {"name": "Users", "description": "Gestion des utilisateurs"},
         {"name": "Stocks", "description": "Gestion des stocks et mouvements"},
-        {"name": "Orders", "description": "Gestion des commandes avec workflow complet"}
+        {"name": "Orders", "description": "Gestion des commandes avec workflow complet"},
+        {"name": "Uploads", "description": "Upload et gestion des images"}
     ],
     "definitions": {
         "Error": {
@@ -191,6 +192,9 @@ def register_blueprints(app):
     """
     Enregistre les blueprints de l'API.
     """
+    from flask import send_from_directory
+    import os
+
     from app.api.v1 import api_v1
     app.register_blueprint(api_v1)
 
@@ -214,9 +218,16 @@ def register_blueprints(app):
                 'categories': '/api/v1/categories',
                 'users': '/api/v1/users',
                 'stocks': '/api/v1/stocks',
-                'orders': '/api/v1/orders'
+                'orders': '/api/v1/orders',
+                'uploads': '/api/v1/uploads'
             }
         }), 200
+
+    # Route pour servir les fichiers uploadés
+    @app.route('/uploads/<path:filename>')
+    def serve_upload(filename):
+        upload_folder = app.config.get('UPLOAD_FOLDER', 'uploads')
+        return send_from_directory(upload_folder, filename)
 
 
 def register_jwt_callbacks(app):
@@ -298,7 +309,7 @@ def register_hooks(app):
 
         # Ne pas vérifier JWT pour certaines routes
         public_routes = ['/', '/health', '/api/v1/auth/login', '/api/v1/auth/refresh']
-        public_prefixes = ['/apidocs', '/apispec', '/flasgger_static']
+        public_prefixes = ['/apidocs', '/apispec', '/flasgger_static', '/uploads']
 
         if request.path in public_routes or request.method == 'OPTIONS':
             return
