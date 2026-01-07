@@ -12,7 +12,7 @@ from app.core.security import role_required, UserRoles
 
 @api_v1.route('/uploads/images', methods=['POST'])
 @jwt_required()
-@role_required([UserRoles.ADMIN, UserRoles.CONTROLEUR])
+@role_required(UserRoles.ADMIN, UserRoles.CONTROLEUR)
 def upload_image():
     """
     Upload une image pour un produit ou une catégorie.
@@ -119,7 +119,7 @@ def upload_image():
 
 @api_v1.route('/uploads/images/multiple', methods=['POST'])
 @jwt_required()
-@role_required([UserRoles.ADMIN, UserRoles.CONTROLEUR])
+@role_required(UserRoles.ADMIN, UserRoles.CONTROLEUR)
 def upload_multiple_images():
     """
     Upload plusieurs images en une seule requête.
@@ -211,7 +211,7 @@ def upload_multiple_images():
 
 @api_v1.route('/uploads/images/<path:filepath>', methods=['DELETE'])
 @jwt_required()
-@role_required([UserRoles.ADMIN, UserRoles.CONTROLEUR])
+@role_required(UserRoles.ADMIN, UserRoles.CONTROLEUR)
 def delete_image(filepath):
     """
     Supprime une image uploadée.
