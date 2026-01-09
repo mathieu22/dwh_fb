@@ -226,7 +226,7 @@ def delete_image(filepath):
         in: path
         type: string
         required: true
-        description: Chemin relatif du fichier (ex: products/img_xxx.jpg)
+        description: "Chemin relatif du fichier (ex products/img_xxx.jpg)"
     responses:
       200:
         description: Image supprimée avec succès
